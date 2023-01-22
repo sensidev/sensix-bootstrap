@@ -17,7 +17,9 @@ MASTER_IP=${MASTER_IP:="127.0.0.1"}
 PROJECT_UID=${PROJECT_UID:=1234}
 PROJECT_USERNAME=${PROJECT_USERNAME:=project}
 PROJECT_HOME=${PROJECT_HOME:=/project}
-PROJECT_PATH_DEVOPS_REPO_PATH=${PROJECT_HOME}/devops/clone
+PROJECT_SALT_GIT_REPO=${PROJECT_SALT_GIT_REPO:=git@bitbucket.org:account/myrepo.git}
+PROJECT_SALT_GIT_BRANCH=${PROJECT_SALT_GIT_BRANCH:=develop}
+PROJECT_SALT_GIT_REPO_PATH=${PROJECT_HOME}/devops/clone
 
 SALT_VERSION=${SALT_VERSION:="3005.1"}
 SSH_PORT=${SSH_PORT:=3339}
@@ -45,8 +47,8 @@ function check_setup() {
         exit 1
     fi
 
-    if [[ ! -d ${PROJECT_PATH_DEVOPS_REPO_PATH}/salt ]]; then
-        echo "Missing ${PROJECT_PATH_DEVOPS_REPO_PATH}/salt folder, please follow README.md"
+    if [[ ! -d ${PROJECT_SALT_GIT_REPO_PATH}/salt ]]; then
+        echo "Missing ${PROJECT_SALT_GIT_REPO_PATH}/salt folder, please follow README.md"
         exit 1
     fi
 
@@ -122,7 +124,7 @@ function install_packages() {
 
 function config_sshd() {
     echo ">>> Config sshd"
-    cp "${PROJECT_PATH_DEVOPS_REPO_PATH}/utils/configs/sshd.conf" /etc/ssh/sshd_config.d/base.conf
+    cp configs/sshd.conf /etc/ssh/sshd_config.d/base.conf
 
     echo ">>> Config sshd Port: ${SSH_PORT}"
     echo "Port ${SSH_PORT}" > /etc/ssh/sshd_config.d/port.conf
@@ -148,7 +150,7 @@ function config_salt_master() {
         sudo mkdir -p /etc/salt/master.d
 
         echo ">>> Master config"
-        sudo ln -s -f -v "${PROJECT_PATH_DEVOPS_REPO_PATH}/salt/masters/${MASTER_TYPE}.yml" "/etc/salt/master.d/${MASTER_TYPE}.conf"
+        cat "salt/masters/${MASTER_TYPE}.yml" | envsubst | sudo tee "/etc/salt/master.d/${MASTER_TYPE}.conf"
 
         echo ">>> Master config interface IP"
         echo "interface: ${MASTER_IP}" > /etc/salt/master.d/interface.conf
