@@ -3,6 +3,7 @@
 #
 # Sensix pre-provisioning Salt Master and Minions.
 # Run this as part of the README.md getting started steps.
+# Run this as root user on a fresh machine.
 #
 
 MINION_ONLY=${MINION_ONLY:=0}
@@ -60,14 +61,14 @@ function check_setup() {
 
 function upgrade_system() {
     echo ">>> Upgrade system"
-    sudo apt-get update
-    sudo apt-get upgrade -y
-    sudo apt-get autoremove -y
+    apt-get update
+    apt-get upgrade -y
+    apt-get autoremove -y
 }
 
 function create_project_user() {
     echo "Create project user"
-    sudo adduser --gecos "Sensix" --uid ${PROJECT_UID} --home ${PROJECT_HOME} --disabled-password ${PROJECT_USERNAME}
+    adduser --gecos "Sensix" --uid ${PROJECT_UID} --home ${PROJECT_HOME} --disabled-password ${PROJECT_USERNAME}
 
     echo "Generate ssh keys in ${PROJECT_HOME}/.ssh/"
     sudo -u ${PROJECT_USERNAME} ssh-keygen -b 2048 -t rsa -f ${PROJECT_HOME}/.ssh/id_rsa -q -P ""
@@ -107,19 +108,19 @@ function install_packages() {
     fi
 
     echo ">>> Install apt packages required for SaltStack"
-    sudo apt-get install -y git libgit2-dev python3-pip
+    apt-get install -y git libgit2-dev python3-pip
 
     echo ">>> Install SaltStack"
-    sudo sh bootstrap-salt.sh ${OPTIONS} -x python3 git "${SALT_VERSION}"
+    sh bootstrap-salt.sh ${OPTIONS} -x python3 git "${SALT_VERSION}"
 
     echo ">>> Install pip packages required for SaltStack"
     pip3 install pygit2==1.7.2
 
     echo ">>> Downgrade some packages (as a workaround for now) Is this still necessary?"
-    sudo pip3 install markupsafe==2.0.1 jinja2==3.0.3 pyzmq==20.0.0
+    pip3 install markupsafe==2.0.1 jinja2==3.0.3 pyzmq==20.0.0
 
     echo ">>> Installed SaltStack versions report"
-    sudo salt --versions-report
+    salt --versions-report
 }
 
 function config_sshd() {
@@ -130,33 +131,33 @@ function config_sshd() {
     echo "Port ${SSH_PORT}" > /etc/ssh/sshd_config.d/port.conf
 
     echo ">>> Restart sshd service"
-    sudo systemctl restart sshd
+    systemctl restart sshd
 }
 
 function install_fail2ban {
     echo ">>> Install fail2ban"
-    sudo apt-get install -y fail2ban
+    apt-get install -y fail2ban
 
     echo ">>> Config sshd Port: ${SSH_PORT}"
     echo -e "[ssh]\nport= ${SSH_PORT}" > /etc/fail2ban/jail.d/ssh_port.conf
 
     echo ">>> Restart fail2ban service"
-    sudo systemctl restart fail2ban
+    systemctl restart fail2ban
 }
 
 function config_salt_master() {
     if [[ ${MINION_ONLY} -eq 0 ]]; then
         echo ">>> Ensure salt master.d conf dir wrapper"
-        sudo mkdir -p /etc/salt/master.d
+        mkdir -p /etc/salt/master.d
 
         echo ">>> Master config"
-        cat "salt/masters/${MASTER_TYPE}.yml" | envsubst | sudo tee "/etc/salt/master.d/${MASTER_TYPE}.conf"
+        cat "salt/masters/${MASTER_TYPE}.yml" | envsubst > "/etc/salt/master.d/${MASTER_TYPE}.conf"
 
         echo ">>> Master config interface IP"
         echo "interface: ${MASTER_IP}" > /etc/salt/master.d/interface.conf
 
         echo ">>> Salt Master service restart"
-        sudo systemctl restart salt-master
+        systemctl restart salt-master
         sleep 2
     fi
 }
@@ -169,7 +170,7 @@ function config_salt_minion() {
         fi
 
         echo ">>> Ensure salt minion.d conf dir wrapper"
-        sudo mkdir -p /etc/salt/minion.d
+        mkdir -p /etc/salt/minion.d
 
         echo ">>> Minion config id: ${MINION_ID}"
         echo "id: ${MINION_ID}" > /etc/salt/minion.d/id.conf
@@ -184,7 +185,7 @@ function config_salt_minion() {
         echo "master: ${MASTER_IP}" > /etc/salt/minion.d/master.conf
 
         echo ">>> Salt Minion service restart"
-        sudo systemctl restart salt-minion
+        systemctl restart salt-minion
         sleep 2
     fi
 }
@@ -192,7 +193,7 @@ function config_salt_minion() {
 function clone_repos() {
     if [ "${MASTER_TYPE}" = "dev" ]; then
         echo ">>> Clone all git repos"
-        sudo salt "${MINION_ID}" state.apply envs.repos pillar='{"force_git_repos":True}'
+        salt "${MINION_ID}" state.apply envs.repos pillar='{"force_git_repos":True}'
 
         check_error $? "Make sure you allow git repo access to your ssh key from ${PROJECT_HOME}/.ssh/*"
     fi
