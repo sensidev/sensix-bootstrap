@@ -19,8 +19,8 @@ PROJECT_UID=${PROJECT_UID:=1234}
 PROJECT_USERNAME=${PROJECT_USERNAME:=project}
 PROJECT_HOME=${PROJECT_HOME:=/project}
 PROJECT_SALT_GIT_REPO=${PROJECT_SALT_GIT_REPO:=git@bitbucket.org:account/myrepo.git}
-PROJECT_SALT_GIT_BRANCH=${PROJECT_SALT_GIT_BRANCH:=develop}
-PROJECT_SALT_GIT_REPO_PATH=${PROJECT_HOME}/devops/clone
+PROJECT_SALT_GIT_DEV_BRANCH=${PROJECT_SALT_GIT_DEV_BRANCH:=develop}
+PROJECT_SALT_GIT_PROD_BRANCH=${PROJECT_SALT_GIT_PROD_BRANCH:=master}
 
 SALT_VERSION=${SALT_VERSION:="3005.1"}
 SSH_PORT=${SSH_PORT:=3339}
@@ -43,16 +43,6 @@ function check_setup() {
         exit 1
     fi
 
-    if [[ ! -d ${PROJECT_HOME} ]]; then
-        echo "Missing ${PROJECT_HOME} folder, please follow README.md"
-        exit 1
-    fi
-
-    if [[ ! -d ${PROJECT_SALT_GIT_REPO_PATH}/salt ]]; then
-        echo "Missing ${PROJECT_SALT_GIT_REPO_PATH}/salt folder, please follow README.md"
-        exit 1
-    fi
-
     if [[ -z ${USER_PUB_KEY} ]]; then
         echo "Missing user pub key, set USER_PUB_KEY env var"
         exit 1
@@ -67,12 +57,13 @@ function upgrade_system() {
 }
 
 function create_project_user() {
-    echo "Create project user"
+    echo ">>> Create project user"
     adduser --gecos "Sensix" --uid ${PROJECT_UID} --home ${PROJECT_HOME} --disabled-password ${PROJECT_USERNAME}
 
-    echo "Generate ssh keys in ${PROJECT_HOME}/.ssh/"
+    echo ">>> Generate ssh keys in ${PROJECT_HOME}/.ssh/"
     sudo -u ${PROJECT_USERNAME} ssh-keygen -b 2048 -t rsa -f ${PROJECT_HOME}/.ssh/id_rsa -q -P ""
 
+    echo ">>> Append user pub key to ${PROJECT_HOME}.ssh/authorized_keys"
     echo "${USER_PUB_KEY}" | sudo -u ${PROJECT_USERNAME} tee -a ${PROJECT_HOME}.ssh/authorized_keys
 
     echo ""
@@ -81,11 +72,11 @@ function create_project_user() {
 
     echo "Add the above ${PROJECT_USERNAME} user's public key to your Bitbucket and GitHub accounts."
 
-    echo "Did you add it?"
+    echo "Did you add it? (ignore for prod envs)"
     select yn in "Yes" "No"; do
         case $yn in
             Yes ) echo "Good!"; break;;
-            No ) exit;;
+            No ) echo "OK, you know what you are doing!"; break;;
         esac
     done
 }
