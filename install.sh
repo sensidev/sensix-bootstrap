@@ -192,7 +192,7 @@ function config_salt_minion() {
 
 function clone_repos() {
     if [ "${MASTER_TYPE}" = "dev" ]; then
-        echo ">>> Clone all git repos"
+        echo ">>> Clone all git repos, for development"
         salt "${MINION_ID}" state.apply envs.repos pillar='{"force_git_repos":True}'
 
         check_error $? "Make sure you allow git repo access to your ssh key from ${PROJECT_HOME}/.ssh/*"
