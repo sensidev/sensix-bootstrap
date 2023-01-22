@@ -64,7 +64,7 @@ function create_project_user() {
     sudo -u ${PROJECT_USERNAME} ssh-keygen -b 2048 -t rsa -f ${PROJECT_HOME}/.ssh/id_rsa -q -P ""
 
     echo ">>> Append user pub key to ${PROJECT_HOME}.ssh/authorized_keys"
-    echo "${USER_PUB_KEY}" | sudo -u ${PROJECT_USERNAME} tee -a ${PROJECT_HOME}.ssh/authorized_keys
+    echo "${USER_PUB_KEY}" >> "${PROJECT_HOME}/.ssh/authorized_keys"
 
     echo ""
     sudo -u ${PROJECT_USERNAME} cat ${PROJECT_HOME}/.ssh/id_rsa.pub
