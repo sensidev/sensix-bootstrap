@@ -19,9 +19,9 @@ PROJECT_UID=${PROJECT_UID:=1234}
 PROJECT_USERNAME=${PROJECT_USERNAME:="project"}
 PROJECT_HOME=${PROJECT_HOME:="/project"}
 PROJECT_SALT_HOME=${PROJECT_SALT_HOME:="${PROJECT_HOME}/devops"}
-PROJECT_SALT_DEVELOPMENT_HOME="${PROJECT_SALT_GIT_REPO}/development"
+PROJECT_SALT_DEVELOPMENT_HOME="${PROJECT_SALT_HOME}/development"
 PROJECT_SALT_GIT_DEVELOPMENT_BRANCH=${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH:="develop"}
-PROJECT_SALT_PRODUCTION_HOME="${PROJECT_SALT_GIT_REPO}/production"
+PROJECT_SALT_PRODUCTION_HOME="${PROJECT_SALT_HOME}/production"
 PROJECT_SALT_GIT_PRODUCTION_BRANCH=${PROJECT_SALT_GIT_PRODUCTION_BRANCH:="master"}
 PROJECT_SALT_GIT_REPO=${PROJECT_SALT_GIT_REPO:="git@bitbucket.org:account/myrepo.git"}
 PROJECT_SHOULD_CLONE_ALL_REPOS=${PROJECT_SHOULD_CLONE_ALL_REPOS:=true}
@@ -160,11 +160,11 @@ function config_salt_master() {
     if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
         echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} in ${PROJECT_SALT_DEVELOPMENT_HOME}"
         sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} "${PROJECT_SALT_DEVELOPMENT_HOME}"
-        check_error $? "Could not clone git repo"
+        check_error $? "Could not clone git repo, do you have the right access?"
 
         echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} in ${PROJECT_SALT_PRODUCTION_HOME}"
         sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} "${PROJECT_SALT_PRODUCTION_HOME}"
-        check_error $? "Could not clone git repo"
+        check_error $? "Could not clone git repo, do you have the right access?"
 
         echo ">>> Ensure salt master.d conf dir wrapper"
         mkdir -p /etc/salt/master.d
