@@ -1,31 +1,49 @@
 #!/bin/bash
 
 #
-# Sensix pre-provisioning Salt Master and Minions.
+# Project pre-provisioning Salt Master and Minions.
 # Run this as part of the README.md getting started steps.
 # Run this as root user on a fresh machine.
 #
-
-MINION_ONLY=${MINION_ONLY:=0}
 MINION_ID=${MINION_ID:=$1}  # Look for first argument by default
+
+MINION_SHOULD_INSTALL=${MINION_SHOULD_INSTALL:=true}
 MINION_SALTENV=${MINION_SALTENV:="base"}
 MINION_PILLARENV=${MINION_PILLARENV:="base"}
 
-MASTER_ONLY=${MASTER_ONLY:=0}
-MASTER_TYPE=${MASTER_TYPE:="dev"}
+MASTER_SHOULD_INSTALL=${MASTER_SHOULD_INSTALL:=true}
+MASTER_CONFIG=${MASTER_CONFIG:="dev"}
 MASTER_IP=${MASTER_IP:="127.0.0.1"}
 
 PROJECT_UID=${PROJECT_UID:=1234}
-PROJECT_USERNAME=${PROJECT_USERNAME:=project}
-PROJECT_HOME=${PROJECT_HOME:=/project}
-PROJECT_SALT_GIT_REPO=${PROJECT_SALT_GIT_REPO:=git@bitbucket.org:account/myrepo.git}
-PROJECT_SALT_GIT_DEV_BRANCH=${PROJECT_SALT_GIT_DEV_BRANCH:=develop}
-PROJECT_SALT_GIT_PROD_BRANCH=${PROJECT_SALT_GIT_PROD_BRANCH:=master}
+PROJECT_USERNAME=${PROJECT_USERNAME:="project"}
+PROJECT_HOME=${PROJECT_HOME:="/project"}
+PROJECT_SALT_HOME=${PROJECT_SALT_HOME:="${PROJECT_HOME}/devops"}
+PROJECT_SALT_DEVELOPMENT_HOME="${PROJECT_SALT_GIT_REPO}/development"
+PROJECT_SALT_GIT_DEVELOPMENT_BRANCH=${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH:="develop"}
+PROJECT_SALT_PRODUCTION_HOME="${PROJECT_SALT_GIT_REPO}/production"
+PROJECT_SALT_GIT_PRODUCTION_BRANCH=${PROJECT_SALT_GIT_PRODUCTION_BRANCH:="master"}
+PROJECT_SALT_GIT_REPO=${PROJECT_SALT_GIT_REPO:="git@bitbucket.org:account/myrepo.git"}
+PROJECT_SHOULD_CLONE_ALL_REPOS=${PROJECT_SHOULD_CLONE_ALL_REPOS:=true}
 
 SALT_VERSION=${SALT_VERSION:="3005.1"}
-SSH_PORT=${SSH_PORT:=3339}
 
 USER_PUB_KEY=${USER_PUB_KEY:=""}
+
+SSH_PORT=${SSH_PORT:=3339}
+SSH_CONFIG=$(cat <<-END
+SyslogFacility AUTH
+LogLevel INFO
+LoginGraceTime 2m
+PermitRootLogin no
+StrictModes yes
+MaxAuthTries 6
+MaxSessions 10
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitEmptyPasswords no
+END
+)
 
 function check_error() {
     # Function. Parameter 1 is the return code
@@ -38,14 +56,15 @@ function check_error() {
 }
 
 function check_setup() {
-    if [ -z "${MASTER_TYPE}" ]; then
-        echo "No Master type provided! Options are filenames without extensions listed in salt/masters"
+    if [ -z "${MASTER_CONFIG}" ]; then
+        echo "Error. No Master config file provided!"
+        echo "Options are filenames without extensions, listed in salt/masters within git salt repo"
         exit 1
     fi
 
     if [[ -z ${USER_PUB_KEY} ]]; then
-        echo "Missing user pub key, set USER_PUB_KEY env var"
-        exit 1
+        echo "Error. Missing user pub key, set USER_PUB_KEY env var"
+        exit 2
     fi
 }
 
@@ -58,7 +77,7 @@ function upgrade_system() {
 
 function create_project_user() {
     echo ">>> Create project user"
-    adduser --gecos "Sensix" --uid ${PROJECT_UID} --home ${PROJECT_HOME} --disabled-password ${PROJECT_USERNAME}
+    adduser --gecos "${PROJECT_USERNAME}" --uid ${PROJECT_UID} --home ${PROJECT_HOME} --disabled-password ${PROJECT_USERNAME}
 
     echo ">>> Generate ssh keys in ${PROJECT_HOME}/.ssh/"
     sudo -u ${PROJECT_USERNAME} ssh-keygen -b 2048 -t rsa -f ${PROJECT_HOME}/.ssh/id_rsa -q -P ""
@@ -72,7 +91,7 @@ function create_project_user() {
 
     echo "Add the above ${PROJECT_USERNAME} user's public key to your Bitbucket and GitHub accounts."
 
-    echo "Did you add it? (ignore for prod envs)"
+    echo "Did you add it? (ignore for minion prod envs)"
     select yn in "Yes" "No"; do
         case $yn in
             Yes ) echo "Good!"; break;;
@@ -86,23 +105,22 @@ function install_packages() {
     wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
 
     # https://github.com/saltstack/salt-bootstrap
-    OPTIONS="-MPD"  # Default, install Master and Minion
+    OPTIONS="-PD"  # Default, install Master and Minion
 
-    if [[ ! ${MASTER_ONLY} -eq 0 ]]; then
-        echo ">>> Install SaltStack Master Only"
-        OPTIONS="-MNPD"
+    if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
+        OPTIONS="${OPTIONS}M"
     fi
 
-    if [[ ! ${MINION_ONLY} -eq 0 ]]; then
-        echo ">>> Install SaltStack Minion Only"
-        OPTIONS="-PD"
+    if [[ "${MINION_SHOULD_INSTALL}" = false ]]; then
+        OPTIONS="${OPTIONS}N"
     fi
 
     echo ">>> Install apt packages required for SaltStack"
     apt-get install -y git libgit2-dev python3-pip
 
-    echo ">>> Install SaltStack"
+    echo ">>> Install SaltStack version ${SALT_VERSION} by bootstrapping with options ${OPTIONS}"
     sh bootstrap-salt.sh ${OPTIONS} -x python3 git "${SALT_VERSION}"
+    check_error $? "Could not install SaltStack"
 
     echo ">>> Install pip packages required for SaltStack"
     pip3 install pygit2==1.7.2
@@ -116,13 +134,14 @@ function install_packages() {
 
 function config_sshd() {
     echo ">>> Config sshd"
-    cp configs/sshd.conf /etc/ssh/sshd_config.d/base.conf
+    echo "${SSH_CONFIG}" > /etc/ssh/sshd_config.d/base.conf
 
     echo ">>> Config sshd Port: ${SSH_PORT}"
     echo "Port ${SSH_PORT}" > /etc/ssh/sshd_config.d/port.conf
 
     echo ">>> Restart sshd service"
     systemctl restart sshd
+    check_error $? "Could not restart sshd"
 }
 
 function install_fail2ban {
@@ -134,27 +153,38 @@ function install_fail2ban {
 
     echo ">>> Restart fail2ban service"
     systemctl restart fail2ban
+    check_error $? "Could not start fail2ban"
 }
 
 function config_salt_master() {
-    if [[ ${MINION_ONLY} -eq 0 ]]; then
+    if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
+        echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} in ${PROJECT_SALT_DEVELOPMENT_HOME}"
+        sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} "${PROJECT_SALT_DEVELOPMENT_HOME}"
+        check_error $? "Could not clone git repo"
+
+        echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} in ${PROJECT_SALT_PRODUCTION_HOME}"
+        sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} "${PROJECT_SALT_PRODUCTION_HOME}"
+        check_error $? "Could not clone git repo"
+
         echo ">>> Ensure salt master.d conf dir wrapper"
         mkdir -p /etc/salt/master.d
 
         echo ">>> Master config"
-        cat "salt/masters/${MASTER_TYPE}.yml" | envsubst > "/etc/salt/master.d/${MASTER_TYPE}.conf"
+        cat "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" | envsubst > "/etc/salt/master.d/${MASTER_CONFIG}.conf"
+        check_error $? "Could not create salt master config"
 
         echo ">>> Master config interface IP"
         echo "interface: ${MASTER_IP}" > /etc/salt/master.d/interface.conf
 
         echo ">>> Salt Master service restart"
         systemctl restart salt-master
+        check_error $? "Could not start salt master"
         sleep 2
     fi
 }
 
 function config_salt_minion() {
-    if [[ ${MASTER_ONLY} -eq 0 ]]; then
+    if [[ "${MINION_SHOULD_INSTALL}" = true ]]; then
         if [ -z "${MINION_ID}" ]; then
             echo "No minion ID provided!"
             exit 1
@@ -177,16 +207,8 @@ function config_salt_minion() {
 
         echo ">>> Salt Minion service restart"
         systemctl restart salt-minion
+        check_error $? "Could not start salt minion"
         sleep 2
-    fi
-}
-
-function clone_repos() {
-    if [ "${MASTER_TYPE}" = "dev" ]; then
-        echo ">>> Clone all git repos, for development"
-        salt "${MINION_ID}" state.apply envs.repos pillar='{"force_git_repos":True}'
-
-        check_error $? "Make sure you allow git repo access to your ssh key from ${PROJECT_HOME}/.ssh/*"
     fi
 }
 
@@ -212,5 +234,4 @@ install_fail2ban
 config_sshd
 config_salt_master
 config_salt_minion
-clone_repos
 print_end_message
