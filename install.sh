@@ -59,18 +59,6 @@ function check_setup() {
         echo "Error. Missing user pub key, set USER_PUB_KEY env var"
         exit 1
     fi
-
-    if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
-        if [ -z "${MASTER_CONFIG}" ]; then
-            echo "Error. No Master config file provided!"
-            echo "Options are filenames without extensions, listed in salt/masters within git salt repo"
-            exit 2
-        fi
-        if [[ ! -f "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" ]]; then
-            echo "Error. No Master config file exists at ${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml"
-            exit 3
-        fi
-    fi
 }
 
 function upgrade_system() {
@@ -161,6 +149,20 @@ function install_fail2ban {
     check_error $? "Could not start fail2ban"
 }
 
+function check_salt_master_setup() {
+    if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
+        if [ -z "${MASTER_CONFIG}" ]; then
+            echo "Error. No Master config file provided!"
+            echo "Options are filenames without extensions, listed in salt/masters within git salt repo"
+            exit 2
+        fi
+        if [[ ! -f "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" ]]; then
+            echo "Error. No Master config file exists at ${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml"
+            exit 3
+        fi
+    fi
+}
+
 function config_salt_master() {
     if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
         echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} in ${PROJECT_SALT_DEVELOPMENT_HOME}"
@@ -170,6 +172,8 @@ function config_salt_master() {
         echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} in ${PROJECT_SALT_PRODUCTION_HOME}"
         sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} "${PROJECT_SALT_PRODUCTION_HOME}"
         check_error $? "Could not clone git repo, do you have the right access?"
+
+        check_salt_master_setup
 
         echo ">>> Ensure salt master.d conf dir wrapper"
         mkdir -p /etc/salt/master.d
