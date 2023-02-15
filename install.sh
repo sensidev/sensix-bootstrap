@@ -56,15 +56,21 @@ function check_error() {
 }
 
 function check_setup() {
-    if [ -z "${MASTER_CONFIG}" ]; then
-        echo "Error. No Master config file provided!"
-        echo "Options are filenames without extensions, listed in salt/masters within git salt repo"
+    if [[ -z ${USER_PUB_KEY} ]]; then
+        echo "Error. Missing user pub key, set USER_PUB_KEY env var"
         exit 1
     fi
 
-    if [[ -z ${USER_PUB_KEY} ]]; then
-        echo "Error. Missing user pub key, set USER_PUB_KEY env var"
-        exit 2
+    if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
+        if [ -z "${MASTER_CONFIG}" ]; then
+            echo "Error. No Master config file provided!"
+            echo "Options are filenames without extensions, listed in salt/masters within git salt repo"
+            exit 2
+        fi
+        if [[ ! -f "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" ]]; then
+            echo "Error. No Master config file exists at ${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml"
+            exit 3
+        fi
     fi
 }
 
@@ -169,8 +175,8 @@ function config_salt_master() {
         echo ">>> Ensure salt master.d conf dir wrapper"
         mkdir -p /etc/salt/master.d
 
-        echo ">>> Master config"
-        cat "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" | envsubst > "/etc/salt/master.d/${MASTER_CONFIG}.conf"
+        echo ">>> Master config - /etc/salt/master.d/${MASTER_CONFIG}.conf"
+        < "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" envsubst > "/etc/salt/master.d/${MASTER_CONFIG}.conf"
         check_error $? "Could not create salt master config"
 
         echo ">>> Master config interface IP"
