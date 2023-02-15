@@ -166,10 +166,12 @@ function check_salt_master_setup() {
 function config_salt_master() {
     if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
         echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} in ${PROJECT_SALT_DEVELOPMENT_HOME}"
+        rm -r "${PROJECT_SALT_DEVELOPMENT_HOME}" ||:
         sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} "${PROJECT_SALT_DEVELOPMENT_HOME}"
         check_error $? "Could not clone git repo, do you have the right access?"
 
         echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} in ${PROJECT_SALT_PRODUCTION_HOME}"
+        rm -r "${PROJECT_SALT_PRODUCTION_HOME}" ||:
         sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} "${PROJECT_SALT_PRODUCTION_HOME}"
         check_error $? "Could not clone git repo, do you have the right access?"
 
