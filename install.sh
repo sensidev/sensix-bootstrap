@@ -73,6 +73,7 @@ function create_project_user() {
     adduser --gecos "${PROJECT_USERNAME}" --uid ${PROJECT_UID} --home ${PROJECT_HOME} --disabled-password ${PROJECT_USERNAME}
 
     echo ">>> Generate ssh keys in ${PROJECT_HOME}/.ssh/"
+    echo ">>> This is going to be overriden by non-dev envs!"
     sudo -u ${PROJECT_USERNAME} ssh-keygen -b 2048 -t rsa -f ${PROJECT_HOME}/.ssh/id_rsa -q -P ""
 
     echo ">>> Append user pub key to ${PROJECT_HOME}.ssh/authorized_keys"
