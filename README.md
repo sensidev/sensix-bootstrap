@@ -105,6 +105,8 @@ You'll be prompted at some point to add `project` user's public key to your Bitb
 Please add a Deployment Key for your salt repo. Git readonly access is enough for a prod master env.
 However, if you are on a remote dev VPS machine, you want to add that key to your account, to gain write access as well.
 
+Also, you'll be prompted to run a `clone.sh` script, to clone all your salt repo and formulas to the desired paths.  
+
 ## Salt keys
 
 On the master VPS machine you'll have to accept salt minion keys (if not auto-accepted), in to make the connection with a newly added minion.

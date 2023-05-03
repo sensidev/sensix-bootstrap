@@ -85,10 +85,26 @@ function create_project_user() {
     echo "Did you add it? (ignore for minion prod envs)"
     select yn in "Yes" "No"; do
         case $yn in
-            Yes ) echo "Good!"; break;;
+            Yes ) echo "Added!"; break;;
             No ) echo "OK, you know what you are doing!"; break;;
         esac
     done
+
+    echo "Now is the time to run in another shell clone.sh (ignore for minion prod envs)"
+    select yn in "Yes" "No"; do
+        case $yn in
+            Yes ) echo "Ran clone.sh from my salt repo!"; break;;
+            No ) echo "OK, you know what you are doing!"; break;;
+        esac
+    done
+}
+
+function clone_repos() {
+        echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} in ${PROJECT_SALT_DEVELOPMENT_HOME}"
+        rm -r "${PROJECT_SALT_DEVELOPMENT_HOME}" ||:
+        sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} "${PROJECT_SALT_DEVELOPMENT_HOME}"
+        check_error $? "Could not clone git repo, do you have the right access?"
+
 }
 
 function install_packages() {
@@ -228,6 +244,7 @@ function print_end_message {
 check_setup
 upgrade_system
 create_project_user
+clone_repos
 install_packages
 install_fail2ban
 config_sshd
