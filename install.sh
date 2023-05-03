@@ -118,7 +118,7 @@ function install_packages() {
     apt-get install -y git libgit2-dev python3-pip
 
     echo ">>> Install SaltStack version ${SALT_VERSION} by bootstrapping with options ${OPTIONS}"
-    sh bootstrap-salt.sh ${OPTIONS} -x python3 git "v${SALT_VERSION}"
+    sh bootstrap-salt.sh ${OPTIONS} -x python3 git "${SALT_VERSION}"
     check_error $? "Could not install SaltStack"
 
     echo ">>> Install pip packages required for SaltStack"
