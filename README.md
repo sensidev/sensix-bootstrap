@@ -24,7 +24,7 @@ We hold Salt masters base configs in `salt/masters` - one of these templates are
 │   └── states
 ```
 
-Example of `salt/masters/dev.yml`. Most of the exported env vars from the `install.sh` script are available, we use `envsubst` to replace env variables with their value.
+Example of `salt/masters/dev.yml`. The script will create a symlink from the salt repo to the `/etc/salt/master.d/`
 
 ```
 log_level: debug
@@ -38,11 +38,11 @@ fileserver_backend:
 
 file_roots:
   base:
-    - ${PROJECT_SALT_DEVELOPMENT_HOME}/salt/states
+    - /path/to/salt/states
 
 pillar_roots:
   base:
-    - ${PROJECT_SALT_DEVELOPMENT_HOME}/salt/pillar
+    - /path/to/salt/pillar
 ```
 
 ## Minimum hardware requirements
