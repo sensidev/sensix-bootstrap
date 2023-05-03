@@ -99,14 +99,6 @@ function create_project_user() {
     done
 }
 
-function clone_repos() {
-        echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} in ${PROJECT_SALT_DEVELOPMENT_HOME}"
-        rm -r "${PROJECT_SALT_DEVELOPMENT_HOME}" ||:
-        sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} "${PROJECT_SALT_DEVELOPMENT_HOME}"
-        check_error $? "Could not clone git repo, do you have the right access?"
-
-}
-
 function install_packages() {
     echo ">>> Bootstrap SaltStack with Python3"
     wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
@@ -243,11 +235,10 @@ function print_end_message {
 
 check_setup
 upgrade_system
-create_project_user
-clone_repos
 install_packages
 install_fail2ban
 config_sshd
 config_salt_master
 config_salt_minion
+create_project_user
 print_end_message
