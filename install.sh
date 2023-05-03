@@ -18,12 +18,9 @@ export MASTER_IP=${MASTER_IP:="127.0.0.1"}
 export PROJECT_UID=${PROJECT_UID:=1234}
 export PROJECT_USERNAME=${PROJECT_USERNAME:="project"}
 export PROJECT_HOME=${PROJECT_HOME:="/project"}
+
 export PROJECT_SALT_HOME="${PROJECT_HOME}/devops"
 export PROJECT_SALT_DEVELOPMENT_HOME="${PROJECT_SALT_HOME}/development"
-export PROJECT_SALT_GIT_DEVELOPMENT_BRANCH=${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH:="develop"}
-export PROJECT_SALT_PRODUCTION_HOME="${PROJECT_SALT_HOME}/production"
-export PROJECT_SALT_GIT_PRODUCTION_BRANCH=${PROJECT_SALT_GIT_PRODUCTION_BRANCH:="master"}
-export PROJECT_SALT_GIT_REPO=${PROJECT_SALT_GIT_REPO:="git@bitbucket.org:account/myrepo.git"}
 
 SALT_VERSION=${SALT_VERSION:="3005.1"}
 
@@ -153,7 +150,7 @@ function install_fail2ban {
 function check_salt_master_setup() {
     if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
         if [ -z "${MASTER_CONFIG}" ]; then
-            echo "Error. No Master config file provided!"
+            echo "Error. No Master config file provided! Did you clone the salt repos first?"
             echo "Options are filenames without extensions, listed in salt/masters within git salt repo"
             exit 2
         fi
@@ -166,24 +163,14 @@ function check_salt_master_setup() {
 
 function config_salt_master() {
     if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
-        echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} in ${PROJECT_SALT_DEVELOPMENT_HOME}"
-        rm -r "${PROJECT_SALT_DEVELOPMENT_HOME}" ||:
-        sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_DEVELOPMENT_BRANCH} "${PROJECT_SALT_DEVELOPMENT_HOME}"
-        check_error $? "Could not clone git repo, do you have the right access?"
-
-        echo ">>> Clone salt git repo branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} in ${PROJECT_SALT_PRODUCTION_HOME}"
-        rm -r "${PROJECT_SALT_PRODUCTION_HOME}" ||:
-        sudo -u ${PROJECT_USERNAME} git clone ${PROJECT_SALT_GIT_REPO} --branch ${PROJECT_SALT_GIT_PRODUCTION_BRANCH} "${PROJECT_SALT_PRODUCTION_HOME}"
-        check_error $? "Could not clone git repo, do you have the right access?"
-
         check_salt_master_setup
 
         echo ">>> Ensure salt master.d conf dir wrapper"
         mkdir -p /etc/salt/master.d
 
         echo ">>> Master config - /etc/salt/master.d/${MASTER_CONFIG}.conf"
-        < "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" envsubst > "/etc/salt/master.d/${MASTER_CONFIG}.conf"
-        check_error $? "Could not create salt master config"
+        ln -sf "${PROJECT_SALT_DEVELOPMENT_HOME}/salt/masters/${MASTER_CONFIG}.yml" "/etc/salt/master.d/${MASTER_CONFIG}.conf"
+        check_error $? "Could not create salt master config symlink"
 
         echo ">>> Master config interface IP"
         echo "interface: ${MASTER_IP}" > /etc/salt/master.d/interface.conf
