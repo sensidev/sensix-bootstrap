@@ -22,7 +22,7 @@ export PROJECT_HOME=${PROJECT_HOME:="/project"}
 export PROJECT_SALT_HOME="${PROJECT_HOME}/devops"
 export PROJECT_SALT_DEVELOPMENT_HOME="${PROJECT_SALT_HOME}/development"
 
-SALT_VERSION=${SALT_VERSION:="3005.1"}
+SALT_VERSION=${SALT_VERSION:="v3006.0"}
 
 USER_PUB_KEY=${USER_PUB_KEY:=""}
 
@@ -101,7 +101,10 @@ function create_project_user() {
 
 function install_packages() {
     echo ">>> Bootstrap SaltStack with Python3"
-    wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
+    # wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
+
+    echo ">>> SKIP downloading the official bootstrap - they have issues at the moment, using an old bootstrap script"
+    wget -O bootstrap-salt.sh https://raw.githubusercontent.com/sensidev/sensix-bootstrap/main/bootstrap-salt.sh
 
     # https://github.com/saltstack/salt-bootstrap
     OPTIONS="-PD"  # Default, install Master and Minion
