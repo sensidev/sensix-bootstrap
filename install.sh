@@ -101,10 +101,10 @@ function create_project_user() {
 
 function install_packages() {
     echo ">>> Bootstrap SaltStack with Python3"
-    # wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
+    wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
 
-    echo ">>> SKIP downloading the official bootstrap - they have issues at the moment, using an old bootstrap script"
-    wget -O bootstrap-salt.sh https://raw.githubusercontent.com/sensidev/sensix-bootstrap/main/bootstrap-salt.sh
+    #echo ">>> SKIP downloading the official bootstrap - they have issues at the moment, using an old bootstrap script"
+    #wget -O bootstrap-salt.sh https://raw.githubusercontent.com/sensidev/sensix-bootstrap/main/bootstrap-salt.sh
 
     # https://github.com/saltstack/salt-bootstrap
     OPTIONS="-PD"  # Default, install Master and Minion
@@ -119,6 +119,14 @@ function install_packages() {
 
     echo ">>> Install apt packages required for SaltStack"
     apt-get install -y git libgit2-dev python3-pip
+
+    echo ">>> Remove legacy ubuntu packages that mess up with PEP440"
+    # https://peps.python.org/pep-0440/
+    apt-get remove python3-distro-info
+    apt-get remove python-apt-common
+
+    echo ">>> Install setuptools package"
+    pip3 install --upgrade setuptools==67.7.2
 
     echo ">>> Install SaltStack version ${SALT_VERSION} by bootstrapping with options ${OPTIONS}"
     sh bootstrap-salt.sh ${OPTIONS} -x python3 git "${SALT_VERSION}"
