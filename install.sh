@@ -103,40 +103,29 @@ function install_packages() {
     echo ">>> Bootstrap SaltStack with Python3"
     wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
 
-    #echo ">>> SKIP downloading the official bootstrap - they have issues at the moment, using an old bootstrap script"
-    #wget -O bootstrap-salt.sh https://raw.githubusercontent.com/sensidev/sensix-bootstrap/main/bootstrap-salt.sh
-
     # https://github.com/saltstack/salt-bootstrap
-    OPTIONS="-PD"  # Default, install Master and Minion
+    OPTIONS="-P -D"  # Default, install Master and Minion
+
+    # Make sure the Ubuntu 22 has all Salt dependencies met
+    # https://docs.saltproject.io/salt/install-guide/en/latest/topics/before-you-start/install-dependencies.html#ubuntu-22-04
+
+    echo ">>> Install basic packages"
+    apt-get install -y git lsb-release ifupdown
 
     if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
-        OPTIONS="${OPTIONS}M"
+        OPTIONS="${OPTIONS} -M"
     fi
 
     if [[ "${MINION_SHOULD_INSTALL}" = false ]]; then
-        OPTIONS="${OPTIONS}N"
+        OPTIONS="${OPTIONS} -N"
+    else
+        echo ">>> Install Ubuntu 22 Salt dependencies for Minion"
+        apt-get install -y debconf-utils dmidecode net-tools
     fi
 
-    echo ">>> Install apt packages required for SaltStack"
-    apt-get install -y git libgit2-dev python3-pip
-
-    echo ">>> Remove legacy ubuntu packages that mess up with PEP440"
-    # https://peps.python.org/pep-0440/
-    apt-get remove python3-distro-info
-    apt-get remove python-apt-common
-
-    echo ">>> Install setuptools package"
-    pip3 install --upgrade setuptools==67.7.2
-
     echo ">>> Install SaltStack version ${SALT_VERSION} by bootstrapping with options ${OPTIONS}"
-    sh bootstrap-salt.sh ${OPTIONS} -x python3 git "${SALT_VERSION}"
+    sh bootstrap-salt.sh "${OPTIONS}" stable "${SALT_VERSION}"
     check_error $? "Could not install SaltStack"
-
-    echo ">>> Install pip packages required for SaltStack"
-    pip3 install pygit2==1.7.2
-
-    echo ">>> Downgrade some packages (as a workaround for now) Is this still necessary?"
-    pip3 install markupsafe==2.0.1 jinja2==3.0.3 pyzmq==20.0.0
 
     echo ">>> Installed SaltStack versions report"
     salt --versions-report
