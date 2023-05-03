@@ -104,7 +104,7 @@ function install_packages() {
     wget -O bootstrap-salt.sh https://bootstrap.saltstack.com
 
     # https://github.com/saltstack/salt-bootstrap
-    OPTIONS="-P -D"  # Default, install Master and Minion
+    OPTIONS="-PD"  # Default, install Master and Minion
 
     # Make sure the Ubuntu 22 has all Salt dependencies met
     # https://docs.saltproject.io/salt/install-guide/en/latest/topics/before-you-start/install-dependencies.html#ubuntu-22-04
@@ -113,11 +113,11 @@ function install_packages() {
     apt-get install -y git lsb-release ifupdown
 
     if [[ "${MASTER_SHOULD_INSTALL}" = true ]]; then
-        OPTIONS="${OPTIONS} -M"
+        OPTIONS="${OPTIONS}M"
     fi
 
     if [[ "${MINION_SHOULD_INSTALL}" = false ]]; then
-        OPTIONS="${OPTIONS} -N"
+        OPTIONS="${OPTIONS}N"
     else
         echo ">>> Install Ubuntu 22 Salt dependencies for Minion"
         apt-get install -y debconf-utils dmidecode net-tools
