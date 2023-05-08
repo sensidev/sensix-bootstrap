@@ -76,6 +76,8 @@ function create_project_user() {
     echo ">>> Append user pub key to ${PROJECT_HOME}.ssh/authorized_keys"
     echo "${USER_PUB_KEY}" >> "${PROJECT_HOME}/.ssh/authorized_keys"
 
+    chown ${PROJECT_USERNAME}:${PROJECT_USERNAME} ${PROJECT_HOME}/.ssh/authorized_keys
+
     echo ""
     sudo -u ${PROJECT_USERNAME} cat ${PROJECT_HOME}/.ssh/id_rsa.pub
     echo ""
